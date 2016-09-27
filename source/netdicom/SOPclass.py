@@ -23,7 +23,7 @@ class Status(object):
         return self.Type+' '+self.Description
 
 
-class ServiceClass(object):   
+class ServiceClass(object):
     def __init__(self):
         pass
 
@@ -60,12 +60,12 @@ class VerificationServiceClass(ServiceClass):
         ans, id = self.DIMSE.Receive(Wait=True)
         return  self.Code2Status(ans.Status)
 
-    
+
     def SCP(self, msg):
         rsp = C_ECHO_ServiceParameters()
         rsp.MessageIDBeingRespondedTo = msg.MessageID.value
         rsp.Status = 0
-                
+
         # send response
         try:
             self.AE.OnReceiveEcho(self)
@@ -113,7 +113,7 @@ class StorageServiceClass(ServiceClass):
         xrange(0x0000,0x0000+1)
         )
 
-    
+
     def SCU(self, dataset, msgid):
         # build C-STORE primitive
         csto = C_STORE_ServiceParameters()
@@ -121,8 +121,8 @@ class StorageServiceClass(ServiceClass):
         csto.AffectedSOPClassUID = dataset.SOPClassUID
         csto.AffectedSOPInstanceUID = dataset.SOPInstanceUID
         csto.Priority = 0x0002
-        csto.DataSet = dsutils.encode(dataset, 
-                                      self.transfersyntax.is_implicit_VR, 
+        csto.DataSet = dsutils.encode(dataset,
+                                      self.transfersyntax.is_implicit_VR,
                                       self.transfersyntax.is_little_endian)
         # send cstore request
         self.DIMSE.Send(csto, self.pcid, self.maxpdulength)
@@ -139,8 +139,8 @@ class StorageServiceClass(ServiceClass):
         status = None
         print self.transfersyntax.is_implicit_VR
         try:
-            DS = dsutils.decode(msg.DataSet, 
-                                self.transfersyntax.is_implicit_VR, 
+            DS = dsutils.decode(msg.DataSet,
+                                self.transfersyntax.is_implicit_VR,
                                 self.transfersyntax.is_little_endian)
         except:
             status = self.CannotUnderstand
@@ -161,7 +161,7 @@ class StorageServiceClass(ServiceClass):
         print "Status: %s" % status
         # send response
         self.DIMSE.Send(rsp, self.pcid, self.ACSE.MaxPDULength)
-        
+
 
 
 class QueryRetrieveServiceClass(ServiceClass):
@@ -215,8 +215,8 @@ class QueryRetrieveFindSOPClass(QueryRetrieveServiceClass):
         cfind.MessageID = msgid
         cfind.AffectedSOPClassUID = self.UID
         cfind.Priority = 0x0002
-        cfind.Identifier = dsutils.encode(ds, 
-                                          self.transfersyntax.is_implicit_VR, 
+        cfind.Identifier = dsutils.encode(ds,
+                                          self.transfersyntax.is_implicit_VR,
                                           self.transfersyntax.is_little_endian)
 
         # send c-find request
@@ -244,15 +244,15 @@ class QueryRetrieveFindSOPClass(QueryRetrieveServiceClass):
         rsp = C_FIND_ServiceParameters()
         rsp.MessageIDBeingRespondedTo = msg.MessageID
         rsp.AffectedSOPClassUID = msg.AffectedSOPClassUID
-        
+
         gen = self.AE.OnReceiveFind(self, ds)
         try:
             while 1:
                 time.sleep(0.001)
                 IdentifierDS, status = gen.next()
                 rsp.Status = int(status)
-                rsp.Identifier = dsutils.encode(IdentifierDS, 
-                                                self.transfersyntax.is_implicit_VR, 
+                rsp.Identifier = dsutils.encode(IdentifierDS,
+                                                self.transfersyntax.is_implicit_VR,
                                                 self.transfersyntax.is_little_endian)
                 # send response
                 self.DIMSE.Send(rsp, self.pcid, self.ACSE.MaxPDULength)
@@ -264,7 +264,7 @@ class QueryRetrieveFindSOPClass(QueryRetrieveServiceClass):
             rsp.Status = int(self.Success)
             self.DIMSE.Send(rsp, self.pcid, self.ACSE.MaxPDULength)
 
-        
+
 
 
 class QueryRetrieveGetSOPClass(QueryRetrieveServiceClass):
@@ -319,13 +319,13 @@ class QueryRetrieveGetSOPClass(QueryRetrieveServiceClass):
         cget.MessageID = msgid
         cget.AffectedSOPClassUID = self.UID
         cget.Priority = 0x0002
-        cget.Identifier = dsutils.encode(ds, 
-                                         self.transfersyntax.is_implicit_VR, 
+        cget.Identifier = dsutils.encode(ds,
+                                         self.transfersyntax.is_implicit_VR,
                                          self.transfersyntax.is_little_endian)
 
         # send c-get primitive
         self.DIMSE.Send(cget, self.pcid, self.maxpdulength)
-        
+
         while 1:
             # receive c-store
             msg, id = self.DIMSE.Receive(Wait=True)
@@ -349,7 +349,7 @@ class QueryRetrieveGetSOPClass(QueryRetrieveServiceClass):
                     # cannot understand
                     status = CannotUnderstand
 
-                
+
                 SOPClass = UID2SOPClass(d.SOPClassUID)
                 status = self.AE.OnReceiveStore(SOPClass, d)
                 rsp.Status = int(status)
@@ -435,7 +435,7 @@ class QueryRetrieveMoveSOPClass(QueryRetrieveServiceClass):
 
     def SCP(self, msg):
         ds = dsutils.decode(msg.Identifier, self.transfersyntax.is_implicit_VR, self.transfersyntax.is_little_endian)
-        
+
         # make response
         rsp = C_MOVE_ServiceParameters()
         rsp.MessageIDBeingRespondedTo = msg.MessageID.value
@@ -444,7 +444,7 @@ class QueryRetrieveMoveSOPClass(QueryRetrieveServiceClass):
 
         # first value returned by callback must be the complete remote AE specs
         remoteAE = gen.next()
-        
+
         # request association to move destination
         ass = self.AE.RequestAssociation(remoteAE)
         nop = gen.next()
@@ -472,11 +472,11 @@ class QueryRetrieveMoveSOPClass(QueryRetrieveServiceClass):
                 rsp.NumberOfFailedSubOperations = nfailed
                 rsp.NumberOfWarningSubOperations = nwarning
                 ncompleted += 1
-                
+
                 # send response
                 self.DIMSE.Send(rsp, self.pcid, self.ACSE.MaxPDULength)
                 print ncompleted
-                
+
         except StopIteration:
             # send final response
             rsp = C_MOVE_ServiceParameters()
@@ -511,6 +511,9 @@ class CTImageStorageSOPClass(StorageSOPClass):
 class CRImageStorageSOPClass(StorageSOPClass):
     UID = '1.2.840.10008.5.1.4.1.1.1'
 
+class DXImageStorageSOPClass(StorageSOPClass):
+    UID = '1.2.840.10008.5.1.4.1.1.1.1'
+
 class SCImageStorageSOPClass(StorageSOPClass):
     UID = '1.2.840.10008.5.1.4.1.1.7'
 
@@ -528,7 +531,7 @@ class RTPlanStorageSOPClass(StorageSOPClass):
 
 class SpatialRegistrationSOPClass(StorageSOPClass):
     UID = '1.2.840.10008.5.1.4.1.1.66.1'
-    
+
 
 
 # QUERY RETRIEVE SOP Classes
@@ -540,7 +543,7 @@ class PatientRootQueryRetrieveSOPClass(QueryRetrieveSOPClass):
 
 class StudyRootQueryRetrieveSOPClass(QueryRetrieveSOPClass):
     pass
-    
+
 class PatientStudyOnlyQueryRetrieveSOPClass(QueryRetrieveSOPClass):
     pass
 
@@ -585,4 +588,3 @@ def UID2SOPClass(UID):
             if tmpuid == UID:
                 return eval(ss)
     return None
-
